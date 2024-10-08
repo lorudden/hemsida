@@ -1,0 +1,7 @@
+*_templ.go
+diwise.css
+.tmp
+.DS_Store
+.vscode/
+air.log
+__debug_bin*
