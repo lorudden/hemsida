@@ -9,11 +9,11 @@ import (
 	"github.com/lorudden/hemsida/internal/pkg/presentation/api"
 )
 
-type FlagType int
-type FlagMap map[FlagType]string
+type Flag int
+type Flags map[Flag]string
 
 const (
-	ListenAddress FlagType = iota
+	ListenAddress Flag = iota
 	ServicePort
 	ControlPort
 
@@ -30,8 +30,8 @@ const (
 	oauth2ClientSecret*/
 )
 
-func DefaultFlags() FlagMap {
-	return FlagMap{
+func DefaultFlags() Flags {
+	return Flags{
 		ListenAddress: "",
 		ServicePort:   "8080",
 		ControlPort:   "",
@@ -40,11 +40,11 @@ func DefaultFlags() FlagMap {
 	}
 }
 
-func New(ctx context.Context, flags FlagMap) (*AppConfig, error) {
-	return &AppConfig{}, nil
+func New(ctx context.Context, flags Flags) (*AppData, error) {
+	return &AppData{}, nil
 }
 
-func Initialize(ctx context.Context, flags FlagMap, cfg *AppConfig) (servicerunner.Runner[AppConfig], error) {
+func Initialize(ctx context.Context, flags Flags, cfg *AppData) (servicerunner.Runner[AppData], error) {
 	var err error
 	cfg.app, err = application.New(ctx)
 	if err != nil {
@@ -56,7 +56,7 @@ func Initialize(ctx context.Context, flags FlagMap, cfg *AppConfig) (servicerunn
 			webserver("control", listen(flags[ListenAddress]), port(flags[ControlPort]), pprof()),
 		),
 		webserver("public", listen(flags[ListenAddress]), port(flags[ServicePort]),
-			muxinit(func(ctx context.Context, identifier string, port string, svcCfg *AppConfig, handler *http.ServeMux) error {
+			muxinit(func(ctx context.Context, identifier string, port string, svcCfg *AppData, handler *http.ServeMux) error {
 				if err = api.RegisterHandlers(ctx, handler, svcCfg.app); err != nil {
 					return err
 				}
@@ -68,13 +68,13 @@ func Initialize(ctx context.Context, flags FlagMap, cfg *AppConfig) (servicerunn
 	return runner, nil
 }
 
-type AppConfig struct {
+type AppData struct {
 	app application.App
 }
 
-var webserver = servicerunner.WithHTTPServeMux[AppConfig]
-var muxinit = servicerunner.OnMuxInit[AppConfig]
-var listen = servicerunner.WithListenAddr[AppConfig]
-var port = servicerunner.WithPort[AppConfig]
-var ifnot = servicerunner.IfNot[AppConfig]
-var pprof = servicerunner.WithPPROF[AppConfig]
+var webserver = servicerunner.WithHTTPServeMux[AppData]
+var muxinit = servicerunner.OnMuxInit[AppData]
+var listen = servicerunner.WithListenAddr[AppData]
+var port = servicerunner.WithPort[AppData]
+var ifnot = servicerunner.IfNot[AppData]
+var pprof = servicerunner.WithPPROF[AppData]

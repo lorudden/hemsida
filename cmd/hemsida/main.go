@@ -37,9 +37,9 @@ func main() {
 	exitIf(err, logger, "failed to run service")
 }
 
-func parseExternalConfig(ctx context.Context, flags config.FlagMap) (context.Context, config.FlagMap) {
+func parseExternalConfig(ctx context.Context, flags config.Flags) (context.Context, config.Flags) {
 
-	apply := func(f config.FlagType) func(string) error {
+	apply := func(f config.Flag) func(string) error {
 		return func(value string) error {
 			flags[f] = value
 			return nil
