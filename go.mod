@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/a-h/templ v0.2.778
-	github.com/diwise/service-chassis v0.0.0-20241008182837-dd85d30bd8c3
+	github.com/diwise/service-chassis v0.0.0-20241028072542-56eec60e5eba
 	github.com/google/uuid v1.6.0
 )
 
