@@ -13,12 +13,10 @@ templ StartPage(version string, localizer Localizer, asset AssetLoaderFunc) {
 			<link href={ asset("/css/loran.css").Path() } rel="stylesheet"/>
 			<script src={ asset("/js/htmx.min.js").Path() } nonce={ csp.Nonce(ctx) }></script>
 			<script src={ asset("/js/htmx-ext-sse.js").Path() } nonce={ csp.Nonce(ctx) }></script>
-			<link href="https://fonts.googleapis.com/css2?family=Raleway&display=swap" rel="stylesheet"/>
-			<link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,700;1,700&display=swap" rel="stylesheet"/>
 			<link rel="icon" type="image/x-icon" href={ asset("/icons/favicon.ico").Path() }/>
 			<title>Löruddens Hemsida</title>
 		</head>
-		<body id="body">
+		<body id="body" class="font-loran">
 			<div id="sse" hx-ext="sse" sse-connect={ "/api/sse/" + version } sse-close="goodbye">
 				<div id="ssetarget" class="hidden" sse-swap="upgrade2"></div>
 				<div id="ssesink" class="hidden" sse-swap="tick"></div>

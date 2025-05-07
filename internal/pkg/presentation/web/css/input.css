@@ -1,7 +1,10 @@
+/*@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap');*/
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Condensed&display=swap');
 @import "tailwindcss";
 
 @theme {
     --font-display: "Satoshi", "sans-serif";
     --breakpoint-3xl: 1920px;
     /* ... */
+    --font-loran: "Ubuntu Condensed", sans-serif;
 }
