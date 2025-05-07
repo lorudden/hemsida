@@ -1,7 +1,63 @@
 package components
 
-templ Home() {
-    <div class="text-2xl">
-        <h1>Hello, World!</h1>
-    </div>
+import (
+	. "github.com/diwise/frontend-toolkit"
+	"github.com/diwise/frontend-toolkit/pkg/middleware/csp"
+)
+
+templ StartPage(version string, localizer Localizer, asset AssetLoaderFunc) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<link href={ asset("/css/loran.css").Path() } rel="stylesheet"/>
+			<script src={ asset("/js/htmx.min.js").Path() } nonce={ csp.Nonce(ctx) }></script>
+			<script src={ asset("/js/htmx-ext-sse.js").Path() } nonce={ csp.Nonce(ctx) }></script>
+			<link href="https://fonts.googleapis.com/css2?family=Raleway&display=swap" rel="stylesheet"/>
+			<link href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,700;1,700&display=swap" rel="stylesheet"/>
+			<link rel="icon" type="image/x-icon" href={ asset("/icons/favicon.ico").Path() }/>
+			<title>Löruddens Hemsida</title>
+		</head>
+		<body id="body">
+			<div id="sse" hx-ext="sse" sse-connect={ "/api/sse/" + version } sse-close="goodbye">
+				<div id="ssetarget" class="hidden" sse-swap="upgrade2"></div>
+				<div id="ssesink" class="hidden" sse-swap="tick"></div>
+				<div class="text-3xl">
+					{ localizer.Get("helloworld") }
+				</div>
+			</div>
+		</body>
+		<script nonce={ csp.Nonce(ctx) }>
+			htmx.config.allowEval = false
+
+			function checkAvailable() {
+				var request = new XMLHttpRequest();
+				request.open('HEAD', document.location.href, true);
+				request.onerror = function() {
+					console.log('failed, retrying')
+					setTimeout(checkAvailable, 250)
+				};
+				request.onreadystatechange = function(){
+					if (request.readyState === 4){
+						if (request.status >= 200 && request.status < 400) {
+							console.log('refreshing page')
+							document.location.replace(document.location.href)
+						}
+					}
+				};
+				request.send();
+			}
+
+			document.body.addEventListener('htmx:sseClose', function (e) {
+				console.log('sse closed: ' + e.detail.type)
+				checkAvailable()
+				//document.location.replace(document.location.href)
+			})
+
+			document.getElementById('ssetarget').addEventListener('htmx:sseMessage', (evt) => {
+				console.log('sse message:')
+				//document.location.replace(document.location.href)
+			})
+		</script>
+	</html>
 }

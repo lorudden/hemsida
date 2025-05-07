@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/servicerunner"
 	"github.com/lorudden/hemsida/internal/pkg/application"
 	"github.com/lorudden/hemsida/internal/pkg/presentation/api"
@@ -21,6 +22,8 @@ const (
 
 	DevModeEnabled
 
+	LogFormat
+
 	/*webAssetPath
 
 	appRoot
@@ -36,7 +39,10 @@ func DefaultFlags() Flags {
 		ServicePort:   "8080",
 		ControlPort:   "",
 
+		WebAssetPath: "/opt/lorudden/assets",
+
 		DevModeEnabled: "false",
+		LogFormat:      "json",
 	}
 }
 
@@ -51,25 +57,45 @@ func Initialize(ctx context.Context, flags Flags, cfg *AppData) (servicerunner.R
 		return nil, err
 	}
 
+	assetLoader, err := api.NewAssetLoader(ctx, flags[WebAssetPath])
+	if err != nil {
+		return nil, err
+	}
+
+	l10n, err := api.NewLocaleBundle(ctx, flags[WebAssetPath], []string{"en", "sv"})
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cfg.cancelContext = context.WithCancel(ctx)
+
 	_, runner := servicerunner.New(ctx, *cfg,
 		ifnot(flags[ControlPort] == "",
 			webserver("control", listen(flags[ListenAddress]), port(flags[ControlPort]), pprof()),
 		),
 		webserver("public", listen(flags[ListenAddress]), port(flags[ServicePort]),
 			muxinit(func(ctx context.Context, identifier string, port string, svcCfg *AppData, handler *http.ServeMux) error {
-				if err = api.RegisterHandlers(ctx, handler, svcCfg.app); err != nil {
+				if err = api.RegisterHandlers(ctx, handler, assetLoader, l10n, svcCfg.app); err != nil {
 					return err
 				}
 
 				return nil
 			}),
-		))
+		),
+		onshutdown(func(ctx context.Context, svcCfg *AppData) error {
+			logging.GetFromContext(ctx).Info("shutting down ...")
+			svcCfg.cancelContext()
+			return nil
+		}),
+	)
 
 	return runner, nil
 }
 
 type AppData struct {
 	app application.App
+
+	cancelContext context.CancelFunc
 }
 
 var webserver = servicerunner.WithHTTPServeMux[AppData]
@@ -78,3 +104,4 @@ var listen = servicerunner.WithListenAddr[AppData]
 var port = servicerunner.WithPort[AppData]
 var ifnot = servicerunner.IfNot[AppData]
 var pprof = servicerunner.WithPPROF[AppData]
+var onshutdown = servicerunner.OnShutdown[AppData]

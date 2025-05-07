@@ -9,6 +9,7 @@ import (
 	"github.com/lorudden/hemsida/cmd/hemsida/config"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
+	"github.com/diwise/service-chassis/pkg/infrastructure/env"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y"
 	"github.com/google/uuid"
 )
@@ -24,7 +25,7 @@ func main() {
 		serviceVersion = "develop" + "-" + uuid.NewString()
 	}
 
-	ctx, logger, cleanup := o11y.Init(ctx, serviceName, serviceVersion)
+	ctx, logger, cleanup := o11y.Init(ctx, serviceName, serviceVersion, flags[config.LogFormat])
 	defer cleanup()
 
 	cfg, err := config.New(ctx, flags)
@@ -39,6 +40,9 @@ func main() {
 
 func parseExternalConfig(ctx context.Context, flags config.Flags) (context.Context, config.Flags) {
 
+	flags[config.ControlPort] = env.GetVariableOrDefault(ctx, "CONTROL_PORT", flags[config.ControlPort])
+	flags[config.ServicePort] = env.GetVariableOrDefault(ctx, "SERVICE_PORT", flags[config.ServicePort])
+
 	apply := func(f config.Flag) func(string) error {
 		return func(value string) error {
 			flags[f] = value
@@ -48,7 +52,11 @@ func parseExternalConfig(ctx context.Context, flags config.Flags) (context.Conte
 
 	// Allow command line arguments to override defaults and environment variables
 	flag.BoolFunc("devmode", "enable devmode with fake backend data", apply(config.DevModeEnabled))
+	flag.Func("listen", "network and address to listen to", apply(config.ListenAddress))
+	flag.Func("controlport", "port number to bind to for the control interface", apply(config.ServicePort))
+	flag.Func("port", "port number to bind to for the public interface", apply(config.ServicePort))
 	flag.Func("web-assets", "path to web assets folder", apply(config.WebAssetPath))
+	flag.Func("log-format", "choose to get log output in text or json format", apply(config.LogFormat))
 	flag.Parse()
 
 	return ctx, flags
