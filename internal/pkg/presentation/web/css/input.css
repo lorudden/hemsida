@@ -3,8 +3,6 @@
 @import "tailwindcss";
 
 @theme {
-    --font-display: "Satoshi", "sans-serif";
-    --breakpoint-3xl: 1920px;
-    /* ... */
+
     --font-loran: "Ubuntu Condensed", sans-serif;
 }
