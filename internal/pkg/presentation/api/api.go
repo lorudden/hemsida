@@ -7,15 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/lorudden/hemsida/internal/pkg/application"
-	"github.com/lorudden/hemsida/internal/pkg/presentation/web/components"
-
 	frontendtoolkit "github.com/diwise/frontend-toolkit"
 	"github.com/diwise/frontend-toolkit/pkg/assets"
 	"github.com/diwise/frontend-toolkit/pkg/locale"
 	"github.com/diwise/frontend-toolkit/pkg/middleware/csp"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
+	"github.com/google/uuid"
+
+	"github.com/lorudden/hemsida/internal/pkg/application"
+	"github.com/lorudden/hemsida/internal/pkg/presentation/api/jsonapi"
+	"github.com/lorudden/hemsida/internal/pkg/presentation/web/components"
 )
 
 func NewAssetLoader(ctx context.Context, assetPath string) (frontendtoolkit.AssetLoader, error) {
@@ -42,13 +43,20 @@ func Logger(ctx context.Context) func(http.Handler) http.Handler {
 	}
 }
 
-func RegisterHandlers(ctx context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle, app application.App) error {
+func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle, app application.App) error {
 
 	version := uuid.NewString()
 
 	mux := http.NewServeMux()
 
+	assets.RegisterEndpoints(appContext, assetLoader, assets.WithMux(mux),
+		assets.WithImmutableExpiry(48*time.Hour),
+		assets.WithRedirect("/favicon.ico", "/icons/favicon.ico", http.StatusFound),
+	)
+
 	mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		acceptLanguage := r.Header.Get("Accept-Language")
 		localizer := l10n.For(acceptLanguage)
 
@@ -56,16 +64,14 @@ func RegisterHandlers(ctx context.Context, handler *http.ServeMux, assetLoader f
 		w.WriteHeader(http.StatusOK)
 
 		home := components.StartPage(version, localizer, assetLoader.Load)
-		home.Render(r.Context(), w)
+		home.Render(ctx, w)
 	}))
 
-	assets.RegisterEndpoints(ctx, assetLoader, assets.WithMux(mux),
-		assets.WithImmutableExpiry(48*time.Hour),
-		assets.WithRedirect("/favicon.ico", "/icons/favicon.ico", http.StatusFound),
-	)
+	mux.Handle("GET /api", jsonapi.NewJSONAPIHandler(appContext))
 
 	handler.Handle("GET /api/sse/{version}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger := logging.GetFromContext(r.Context())
+		ctx := r.Context()
+		logger := logging.GetFromContext(ctx)
 
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -108,10 +114,10 @@ func RegisterHandlers(ctx context.Context, handler *http.ServeMux, assetLoader f
 				if !waitingForUpgrade {
 					fmt.Fprintf(w, eventFmt, "tick", t.Format(time.RFC3339Nano))
 				}
-			case <-r.Context().Done():
+			case <-ctx.Done():
 				logger.Info("sse client connection closed")
 				return
-			case <-ctx.Done():
+			case <-appContext.Done():
 				logger.Info("we are shutting down")
 				fmt.Fprintf(w, eventFmt, "goodbye", version)
 				flusher.Flush()
@@ -123,7 +129,7 @@ func RegisterHandlers(ctx context.Context, handler *http.ServeMux, assetLoader f
 
 	}))
 
-	handler.Handle("GET /", Logger(ctx)(csp.NewContentSecurityPolicy(csp.StrictDynamic())(mux)))
+	handler.Handle("GET /", Logger(appContext)(csp.NewContentSecurityPolicy(csp.StrictDynamic())(mux)))
 
 	return nil
 }

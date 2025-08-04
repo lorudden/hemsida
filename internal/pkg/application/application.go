@@ -2,10 +2,10 @@ package application
 
 import "context"
 
-type App interface{}
+type App any
 
 type impl struct{}
 
-func New(ctx context.Context) (App, error) {
+func New(context.Context) (App, error) {
 	return &impl{}, nil
 }

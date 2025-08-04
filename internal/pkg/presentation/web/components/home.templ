@@ -28,12 +28,19 @@ templ StartPage(version string, localizer Localizer, asset AssetLoaderFunc) {
 		<script nonce={ csp.Nonce(ctx) }>
 			htmx.config.allowEval = false
 
+			let failedAvailabilityChecksCount = 0
+
 			function checkAvailable() {
 				var request = new XMLHttpRequest();
 				request.open('HEAD', document.location.href, true);
 				request.onerror = function() {
 					console.log('failed, retrying')
-					setTimeout(checkAvailable, 250)
+					failedAvailabilityChecksCount++
+					if (failedAvailabilityChecksCount < 20) {
+						setTimeout(checkAvailable, 250)
+					} else {
+						setTimeout(checkAvailable, 5000)
+					}
 				};
 				request.onreadystatechange = function(){
 					if (request.readyState === 4){
