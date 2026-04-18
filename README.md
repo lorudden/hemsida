@@ -47,3 +47,15 @@ I första versionen så fokuserar vi på de sidor som inte kräver någon inlogg
 * Passerande flygplan?
     * Hämta data från https://opensky-network.org/api
 * Karta?
+
+## Tekniskt mumbo jumbo
+
+### Bygga och testköra hemsidan med docker
+
+```bash
+# bygg en docker image av hemsidan
+docker build -f deployments/Dockerfile -t lorudden/hemsida:latest .
+# starta upp en container
+docker run --rm -p 8080:8080 lorudden/hemsida:latest
+# surfa till http://localhost:8080/ för att titta på resultatet
+```
