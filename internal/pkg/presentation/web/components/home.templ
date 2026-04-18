@@ -17,7 +17,7 @@ templ StartPage(version string, localizer Localizer, asset AssetLoaderFunc) {
 			<title>Löruddens Hemsida</title>
 		</head>
 		<body id="body" class="font-loran">
-			<div id="sse" hx-ext="sse" sse-connect={ "/api/sse/" + version } sse-close="goodbye">
+			<div id="sse" hx-sse:connect={ "/api/sse/" + version } hx-sse:close="goodbye">
 				<div id="ssetarget" class="hidden" sse-swap="upgrade2"></div>
 				<div id="ssesink" class="hidden" sse-swap="tick"></div>
 				<div class="text-3xl">
@@ -53,7 +53,7 @@ templ StartPage(version string, localizer Localizer, asset AssetLoaderFunc) {
 				request.send();
 			}
 
-			document.body.addEventListener('htmx:sseClose', function (e) {
+			document.body.addEventListener('htmx:sse:close', function (e) {
 				console.log('sse closed: ' + e.detail.type)
 				checkAvailable()
 				//document.location.replace(document.location.href)
