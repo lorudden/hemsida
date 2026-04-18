@@ -1,290 +1,376 @@
-/*
-Server Sent Events Extension
-============================
-This extension adds support for Server Sent Events to htmx.  See /www/extensions/sse.md for usage instructions.
+(() => {
+    let api;
 
-*/
+    // ========================================
+    // HELPERS
+    // ========================================
 
-(function() {
-  /** @type {import("../htmx").HtmxInternalApi} */
-  var api
-
-  htmx.defineExtension('sse', {
-
-    /**
-     * Init saves the provided reference to the internal HTMX API.
-     *
-     * @param {import("../htmx").HtmxInternalApi} api
-     * @returns void
-     */
-    init: function(apiRef) {
-      // store a reference to the internal API.
-      api = apiRef
-
-      // set a function in the public API for creating new EventSource objects
-      if (htmx.createEventSource == undefined) {
-        htmx.createEventSource = createEventSource
-      }
-    },
-
-    getSelectors: function() {
-      return ['[sse-connect]', '[data-sse-connect]', '[sse-swap]', '[data-sse-swap]']
-    },
-
-    /**
-     * onEvent handles all events passed to this extension.
-     *
-     * @param {string} name
-     * @param {Event} evt
-     * @returns void
-     */
-    onEvent: function(name, evt) {
-      var parent = evt.target || evt.detail.elt
-      switch (name) {
-        case 'htmx:beforeCleanupElement':
-          var internalData = api.getInternalData(parent)
-          // Try to remove remove an EventSource when elements are removed
-          var source = internalData.sseEventSource
-          if (source) {
-            api.triggerEvent(parent, 'htmx:sseClose', {
-              source,
-              type: 'nodeReplaced',
-            })
-            internalData.sseEventSource.close()
-          }
-
-          return
-
-        // Try to create EventSources when elements are processed
-        case 'htmx:afterProcessNode':
-          ensureEventSourceOnElement(parent)
-      }
+    function getConfig(ctx) {
+        let isConnect = api.attributeValue(ctx.sourceElement, 'hx-sse:connect') != null;
+        let defaults = {
+            reconnect: isConnect,
+            reconnectDelay: 500,
+            reconnectMaxDelay: 60000,
+            reconnectMaxAttempts: Infinity,
+            reconnectJitter: 0.3,
+            pauseOnBackground: isConnect
+        };
+        let global = htmx.config.sse || {};
+        // hx-config="sse.reconnect:true sse.reconnectDelay:50ms" is parsed by
+        // core's __mergeConfig into ctx.request.sse during createRequestContext
+        let perElement = ctx.request.sse || {};
+        return {...defaults, ...global, ...perElement};
     }
-  })
 
-  /// ////////////////////////////////////////////
-  // HELPER FUNCTIONS
-  /// ////////////////////////////////////////////
+    // ========================================
+    // SSE PARSER
+    // ========================================
 
-  /**
-   * createEventSource is the default method for creating new EventSource objects.
-   * it is hoisted into htmx.config.createEventSource to be overridden by the user, if needed.
-   *
-   * @param {string} url
-   * @returns EventSource
-   */
-  function createEventSource(url) {
-    return new EventSource(url, { withCredentials: true })
-  }
+    async function* parseSSE(reader) {
+        let decoder = new TextDecoder();
+        let buffer = '';
+        let hasData = false;
+        let message = {data: '', event: '', id: '', retry: null};
+        let firstChunk = true;
 
-  /**
-   * registerSSE looks for attributes that can contain sse events, right
-   * now hx-trigger and sse-swap and adds listeners based on these attributes too
-   * the closest event source
-   *
-   * @param {HTMLElement} elt
-   */
-  function registerSSE(elt) {
-    // Add message handlers for every `sse-swap` attribute
-    if (api.getAttributeValue(elt, 'sse-swap')) {
-      // Find closest existing event source
-      var sourceElement = api.getClosestMatch(elt, hasEventSource)
-      if (sourceElement == null) {
-        // api.triggerErrorEvent(elt, "htmx:noSSESourceError")
-        return null // no eventsource in parentage, orphaned element
-      }
+        try {
+            while (true) {
+                let {done, value} = await reader.read();
+                if (done) break;
 
-      // Set internalData and source
-      var internalData = api.getInternalData(sourceElement)
-      var source = internalData.sseEventSource
+                let chunk = decoder.decode(value, {stream: true});
+                // Strip leading BOM (U+FEFF) per SSE spec
+                if (firstChunk) {
+                    if (chunk.charCodeAt(0) === 0xFEFF) chunk = chunk.slice(1);
+                    firstChunk = false;
+                }
+                buffer += chunk;
 
-      var sseSwapAttr = api.getAttributeValue(elt, 'sse-swap')
-      var sseEventNames = sseSwapAttr.split(',')
+                // Split on \r\n, \r, or \n (SSE spec allows all three)
+                let lines = buffer.split(/\r\n|\r|\n/);
+                buffer = lines.pop() || '';
 
-      for (var i = 0; i < sseEventNames.length; i++) {
-        const sseEventName = sseEventNames[i].trim()
-        const listener = function(event) {
-          // If the source is missing then close SSE
-          if (maybeCloseSSESource(sourceElement)) {
-            return
-          }
+                for (let line of lines) {
+                    if (!line) {
+                        if (hasData) {
+                            yield message;
+                            hasData = false;
+                            message = {data: '', event: '', id: '', retry: null};
+                        }
+                        continue;
+                    }
 
-          // If the body no longer contains the element, remove the listener
-          if (!api.bodyContains(elt)) {
-            source.removeEventListener(sseEventName, listener)
-            return
-          }
+                    let colonIndex = line.indexOf(':');
+                    if (colonIndex === 0) continue; // comment line
 
-          // swap the response into the DOM and trigger a notification
-          if (!api.triggerEvent(elt, 'htmx:sseBeforeMessage', event)) {
-            return
-          }
-          swap(elt, event.data)
-          api.triggerEvent(elt, 'htmx:sseMessage', event)
+                    let field, value;
+                    if (colonIndex < 0) {
+                        // No colon: entire line is field name, value is empty string
+                        field = line;
+                        value = '';
+                    } else {
+                        field = line.slice(0, colonIndex);
+                        value = line.slice(colonIndex + 1);
+                        if (value[0] === ' ') value = value.slice(1);
+                    }
+
+                    if (field === 'data') {
+                        message.data += (hasData ? '\n' : '') + value;
+                        hasData = true;
+                    } else if (field === 'event') {
+                        message.event = value;
+                    } else if (field === 'id') {
+                        if (!value.includes('\0')) message.id = value;
+                    } else if (field === 'retry') {
+                        let retryValue = parseInt(value, 10);
+                        if (!isNaN(retryValue)) message.retry = retryValue;
+                    }
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
+    // ========================================
+    // STREAMING LOOP
+    // ========================================
+
+    // Starts streaming from a response. Handles reconnection by re-fetching
+    // with the saved request context (no full pipeline re-run).
+    async function handleSSEResponse(ctx) {
+        let element = ctx.sourceElement;
+        let config = getConfig(ctx);
+        let reconnectRequested = false;
+
+        let connection = {
+            url: ctx.request.action,
+            config: config,
+            abortController: null,
+            reader: null,
+            lastEventId: null,
+            delayCanceller: null,
+            visibilityHandler: null,
+            attempt: 0,
+            cancelled: false,
+            status: null
+        };
+        api.htmxProp(element).sse = connection;
+
+        let reconnect = () => {
+            if (!element.isConnected || reconnectRequested) return;
+            reconnectRequested = true;
+            if (connection.delayCanceller) connection.delayCanceller();
+            connection.reader?.cancel();
+        };
+
+        let paused = false;
+        let unpauseResolver = null;
+
+        if (config.pauseOnBackground) {
+            let visibilityHandler = () => {
+                if (document.hidden) {
+                    paused = true;
+                    connection.reader?.cancel();
+                } else if (paused) {
+                    paused = false;
+                    if (unpauseResolver) unpauseResolver();
+                }
+            };
+            document.addEventListener('visibilitychange', visibilityHandler);
+            connection.visibilityHandler = visibilityHandler;
         }
 
-        // Register the new listener
-        api.getInternalData(elt).sseEventListener = listener
-        source.addEventListener(sseEventName, listener)
-      }
-    }
-
-    // Add message handlers for every `hx-trigger="sse:*"` attribute
-    if (api.getAttributeValue(elt, 'hx-trigger')) {
-      // Find closest existing event source
-      var sourceElement = api.getClosestMatch(elt, hasEventSource)
-      if (sourceElement == null) {
-        // api.triggerErrorEvent(elt, "htmx:noSSESourceError")
-        return null // no eventsource in parentage, orphaned element
-      }
-
-      // Set internalData and source
-      var internalData = api.getInternalData(sourceElement)
-      var source = internalData.sseEventSource
-
-      var triggerSpecs = api.getTriggerSpecs(elt)
-      triggerSpecs.forEach(function(ts) {
-        if (ts.trigger.slice(0, 4) !== 'sse:') {
-          return
+        connection.cancelled = false;
+        if (!api.triggerHtmxEvent(element, 'htmx:before:sse:connection', {connection}) || connection.cancelled) {
+            cleanup(element, 'cancelled');
+            return;
         }
 
-        var listener = function (event) {
-          if (maybeCloseSSESource(sourceElement)) {
-            return
-          }
-          if (!api.bodyContains(elt)) {
-            source.removeEventListener(ts.trigger.slice(4), listener)
-          }
-          // Trigger events to be handled by the rest of htmx
-          htmx.trigger(elt, ts.trigger, event)
-          htmx.trigger(elt, 'htmx:sseMessage', event)
+        connection.status = ctx.response.status;
+        api.triggerHtmxEvent(element, 'htmx:after:sse:connection', {connection});
+
+        let currentResponse = ctx.response.raw;
+
+        try {
+            while (element.isConnected) {
+                // Reconnection (not on first iteration — we already have the response)
+                if (connection.attempt > 0) {
+                    // Wait while paused (tab backgrounded with pauseOnBackground)
+                    if (paused) {
+                        await new Promise(r => { unpauseResolver = r; });
+                        unpauseResolver = null;
+                        if (!element.isConnected) break;
+                        connection.attempt = 1; // reset so delay doesn't escalate from pauses
+                        reconnectRequested = true; // bypass maxAttempts check
+                    }
+
+                    if (!reconnectRequested) {
+                        if (!config.reconnect || connection.attempt > config.reconnectMaxAttempts) break;
+                    }
+
+                    let baseDelay = htmx.parseInterval(config.reconnectDelay) ?? config.reconnectDelay;
+                    let maxDelay = htmx.parseInterval(config.reconnectMaxDelay) ?? config.reconnectMaxDelay;
+                    let delay = Math.min(
+                        baseDelay * Math.pow(2, connection.attempt - 1),
+                        maxDelay
+                    );
+                    if (config.reconnectJitter > 0) {
+                        let jitterRange = delay * config.reconnectJitter;
+                        delay = Math.max(0, delay + (Math.random() * 2 - 1) * jitterRange);
+                    }
+
+                    connection.cancelled = false;
+                    if (!api.triggerHtmxEvent(element, 'htmx:before:sse:connection', {connection}) || connection.cancelled) break;
+
+                    await new Promise(r => {
+                        connection.delayCanceller = r;
+                        setTimeout(r, delay);
+                    });
+                    connection.delayCanceller = null;
+                    if (!element.isConnected) break;
+
+                    // Re-fetch using saved request context (no full pipeline re-run)
+                    let ac = new AbortController();
+                    connection.abortController = ac;
+                    try {
+                        if (connection.lastEventId) ctx.request.headers['Last-Event-ID'] = connection.lastEventId;
+                        currentResponse = await fetch(ctx.request.action, {
+                            ...ctx.request,
+                            signal: ac.signal
+                        });
+                    } catch (e) {
+                        if (ac.signal.aborted) break;
+                        api.triggerHtmxEvent(element, 'htmx:sse:error', {error: e, url: ctx.request.action});
+                        reconnectRequested = false;
+                        connection.attempt++;
+                        continue;
+                    }
+
+                    if (!currentResponse.ok) {
+                        api.triggerHtmxEvent(element, 'htmx:sse:error', {
+                            error: new Error(`SSE reconnect failed with status ${currentResponse.status}`),
+                            status: currentResponse.status,
+                            url: ctx.request.action
+                        });
+                        reconnectRequested = false;
+                        connection.attempt++;
+                        continue;
+                    }
+
+                    connection.status = currentResponse.status;
+                    api.triggerHtmxEvent(element, 'htmx:after:sse:connection', {connection});
+                    connection.attempt = 0;
+                }
+
+                // Stream messages
+                reconnectRequested = false;
+
+                try {
+                    connection.reader = currentResponse.body.getReader();
+
+                    for await (let msg of parseSSE(connection.reader)) {
+                        if (!element.isConnected || reconnectRequested) break;
+
+                        let detail = {
+                            message: {data: msg.data, event: msg.event, id: msg.id, cancelled: false}
+                        };
+                        if (!api.triggerHtmxEvent(element, 'htmx:before:sse:message', detail) || detail.message.cancelled) continue;
+
+                        if (msg.id) {
+                            connection.lastEventId = msg.id;
+                        }
+                        if (msg.retry != null) config.reconnectDelay = msg.retry;
+
+                        if (detail.message.event) {
+                            htmx.trigger(element, detail.message.event, {data: detail.message.data, id: detail.message.id});
+                            delete detail.message.cancelled;
+                            api.triggerHtmxEvent(element, 'htmx:after:sse:message', detail);
+
+                            // hx-sse:close="eventname" — close connection on matching event
+                            let closeEvent = api.attributeValue(element, 'hx-sse:close');
+                            if (closeEvent && detail.message.event === closeEvent) {
+                                cleanup(element, 'message');
+                                return;
+                            }
+                            continue;
+                        }
+
+                        // Swap content using the ctx from core (target/swap already resolved)
+                        ctx.text = detail.message.data;
+                        await htmx.swap(ctx);
+                        delete detail.message.cancelled;
+                        api.triggerHtmxEvent(element, 'htmx:after:sse:message', detail);
+                    }
+                } catch (e) {
+                    if (!connection.abortController?.signal?.aborted) {
+                        api.triggerHtmxEvent(element, 'htmx:sse:error', {error: e, url: ctx.request.action});
+                    }
+                }
+
+                connection.reader = null;
+                if (!element.isConnected) break;
+
+                connection.attempt++;
+            }
+        } finally {
+            cleanup(element, element.isConnected ? 'ended' : 'removed');
         }
-
-        // Register the new listener
-        api.getInternalData(elt).sseEventListener = listener
-        source.addEventListener(ts.trigger.slice(4), listener)
-      })
-    }
-  }
-
-  /**
-   * ensureEventSourceOnElement creates a new EventSource connection on the provided element.
-   * If a usable EventSource already exists, then it is returned.  If not, then a new EventSource
-   * is created and stored in the element's internalData.
-   * @param {HTMLElement} elt
-   * @param {number} retryCount
-   * @returns {EventSource | null}
-   */
-  function ensureEventSourceOnElement(elt, retryCount) {
-    if (elt == null) {
-      return null
     }
 
-    // handle extension source creation attribute
-    if (api.getAttributeValue(elt, 'sse-connect')) {
-      var sseURL = api.getAttributeValue(elt, 'sse-connect')
-      if (sseURL == null) {
-        return
-      }
+    // ========================================
+    // ELEMENT PROCESSING
+    // ========================================
 
-      ensureEventSource(elt, sseURL, retryCount)
+    function processElement(element) {
+        let connectUrl = api.attributeValue(element, 'hx-sse:connect');
+        if (!connectUrl) return;
+        if (element._htmx?.sse) return; // already set up
+
+        let specString = api.attributeValue(element, 'hx-trigger') || 'load';
+        api.onTrigger(element, specString, () => {
+            if (element._htmx?.sse) return; // prevent duplicate connections
+            htmx.ajax('GET', connectUrl, {source: element});
+        });
     }
 
-    registerSSE(elt)
-  }
+    // ========================================
+    // CLEANUP
+    // ========================================
 
-  function ensureEventSource(elt, url, retryCount) {
-    var source = htmx.createEventSource(url)
+    function cleanup(element, reason) {
+        let connection = element?._htmx?.sse;
+        if (!connection) return;
 
-    source.onerror = function(err) {
-      // Log an error event
-      api.triggerErrorEvent(elt, 'htmx:sseError', { error: err, source })
-
-      // If parent no longer exists in the document, then clean up this EventSource
-      if (maybeCloseSSESource(elt)) {
-        return
-      }
-
-      // Otherwise, try to reconnect the EventSource
-      if (source.readyState === EventSource.CLOSED) {
-        retryCount = retryCount || 0
-        retryCount = Math.max(Math.min(retryCount * 2, 128), 1)
-        var timeout = retryCount * 500
-        window.setTimeout(function() {
-          ensureEventSourceOnElement(elt, retryCount)
-        }, timeout)
-      }
-    }
-
-    source.onopen = function(evt) {
-      api.triggerEvent(elt, 'htmx:sseOpen', { source })
-
-      if (retryCount && retryCount > 0) {
-        const childrenToFix = elt.querySelectorAll("[sse-swap], [data-sse-swap], [hx-trigger], [data-hx-trigger]")
-        for (let i = 0; i < childrenToFix.length; i++) {
-          registerSSE(childrenToFix[i])
+        connection.abortController?.abort();
+        connection.reader?.cancel?.();
+        if (connection.delayCanceller) connection.delayCanceller();
+        if (connection.visibilityHandler) {
+            document.removeEventListener('visibilitychange', connection.visibilityHandler);
         }
-        // We want to increase the reconnection delay for consecutive failed attempts only
-        retryCount = 0
-      }
+        api.triggerHtmxEvent(element, 'htmx:sse:close', {connection, reason: reason || 'cleanup'});
+        delete element._htmx.sse;
     }
 
-    api.getInternalData(elt).sseEventSource = source
+    // ========================================
+    // BACKWARD COMPATIBILITY
+    // ========================================
 
+    function checkLegacyAttributes(element) {
+        if (element.hasAttribute('sse-connect')) {
+            console.warn('HTMX SSE: Legacy attribute sse-connect is deprecated. Use hx-sse:connect instead.');
 
-    var closeAttribute = api.getAttributeValue(elt, "sse-close");
-    if (closeAttribute) {
-      // close eventsource when this message is received
-      source.addEventListener(closeAttribute, function() {
-        api.triggerEvent(elt, 'htmx:sseClose', {
-          source,
-          type: 'message',
-        })
-        source.close()
-      });
+            let url = element.getAttribute('sse-connect');
+            let attr = (htmx.config.prefix || 'hx-') + 'sse' + (htmx.config.metaCharacter || ':') + 'connect';
+            if (!element.hasAttribute(attr)) {
+                element.setAttribute(attr, url);
+            }
+        }
+        if (element.hasAttribute('sse-swap')) {
+            console.warn('HTMX SSE: sse-swap is removed in htmx 4. Unnamed SSE messages are swapped automatically. Named events are dispatched as DOM events.');
+        }
     }
-  }
 
-  /**
-   * maybeCloseSSESource confirms that the parent element still exists.
-   * If not, then any associated SSE source is closed and the function returns true.
-   *
-   * @param {HTMLElement} elt
-   * @returns boolean
-   */
-  function maybeCloseSSESource(elt) {
-    if (!api.bodyContains(elt)) {
-      var source = api.getInternalData(elt).sseEventSource
-      if (source != undefined) {
-        api.triggerEvent(elt, 'htmx:sseClose', {
-          source,
-          type: 'nodeMissing',
-        })
-        source.close()
-        // source = null
-        return true
-      }
-    }
-    return false
-  }
+    // ========================================
+    // EXTENSION REGISTRATION
+    // ========================================
 
+    htmx.registerExtension('sse', {
+        init: (internalAPI) => {
+            api = internalAPI;
+        },
 
-  /**
-   * @param {HTMLElement} elt
-   * @param {string} content
-   */
-  function swap(elt, content) {
-    api.withExtensions(elt, function(extension) {
-      content = extension.transformResponse(content, null, elt)
-    })
+        htmx_config_request: (element, detail) => {
+            detail.ctx.request.headers['Accept'] = 'text/html, text/event-stream';
+        },
 
-    var swapSpec = api.getSwapSpecification(elt)
-    var target = api.getTarget(elt)
-    api.swap(target, content, swapSpec)
-  }
+        // Intercept SSE responses before core consumes the body
+        htmx_before_response: (element, detail) => {
+            let ctx = detail.ctx;
+            let contentType = ctx.response.raw.headers.get('Content-Type');
+            if (!contentType?.includes('text/event-stream')) return;
 
+            // Take over — core will return without calling response.text()
+            handleSSEResponse(ctx).catch(e => {
+                api.triggerHtmxEvent(element, 'htmx:sse:error', {error: e, url: ctx.request.action});
+                cleanup(element);
+            });
+            return false;
+        },
 
-  function hasEventSource(node) {
-    return api.getInternalData(node).sseEventSource != null
-  }
-})()
+        htmx_after_process: (element) => {
+            checkLegacyAttributes(element);
+            processElement(element);
+            let mc = htmx.config.metaCharacter || ':';
+            let attr = CSS.escape((htmx.config.prefix || 'hx-') + 'sse' + mc + 'connect');
+            element.querySelectorAll(`[${attr}],[sse-connect]`).forEach((el) => {
+                checkLegacyAttributes(el);
+                processElement(el);
+            });
+        },
+
+        htmx_before_cleanup: (element) => {
+            cleanup(element);
+        }
+    });
+})();
