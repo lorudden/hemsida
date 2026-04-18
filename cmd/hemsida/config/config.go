@@ -79,6 +79,8 @@ func Initialize(ctx context.Context, flags Flags, cfg *AppData) (servicerunner.R
 					return err
 				}
 
+				logging.GetFromContext(ctx).Info("server running", "port", port)
+
 				return nil
 			}),
 		),
