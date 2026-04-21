@@ -4,3 +4,7 @@ loran.css
 .DS_Store
 air.log
 __debug_bin*
+.cache
+.gocache
+.home
+.gopath

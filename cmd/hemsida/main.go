@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/lorudden/hemsida/cmd/hemsida/config"
+	"github.com/lorudden/hemsida/internal/app"
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/buildinfo"
 	"github.com/diwise/service-chassis/pkg/infrastructure/env"
@@ -18,32 +18,32 @@ const serviceName string = "hemsida"
 
 func main() {
 
-	ctx, flags := parseExternalConfig(context.Background(), config.DefaultFlags())
+	ctx, flags := parseExternalConfig(context.Background(), app.DefaultFlags())
 
 	serviceVersion := buildinfo.SourceVersion()
-	if serviceVersion == "" || flags[config.DevModeEnabled] == "true" {
+	if serviceVersion == "" || flags[app.DevModeEnabled] == "true" {
 		serviceVersion = "develop" + "-" + uuid.NewString()
 	}
 
-	ctx, logger, cleanup := o11y.Init(ctx, serviceName, serviceVersion, flags[config.LogFormat])
+	ctx, logger, cleanup := o11y.Init(ctx, serviceName, serviceVersion, flags[app.LogFormat])
 	defer cleanup()
 
-	cfg, err := config.New(ctx, flags)
+	cfg, err := app.NewConfig(ctx, flags)
 	exitIf(err, logger, "failed to create application config")
 
-	runner, err := config.Initialize(ctx, flags, cfg)
+	runner, err := app.Initialize(ctx, flags, cfg)
 	exitIf(err, logger, "failed to initialize service runner")
 
 	err = runner.Run(ctx)
 	exitIf(err, logger, "failed to run service")
 }
 
-func parseExternalConfig(ctx context.Context, flags config.Flags) (context.Context, config.Flags) {
+func parseExternalConfig(ctx context.Context, flags app.Flags) (context.Context, app.Flags) {
 
-	flags[config.ControlPort] = env.GetVariableOrDefault(ctx, "CONTROL_PORT", flags[config.ControlPort])
-	flags[config.ServicePort] = env.GetVariableOrDefault(ctx, "SERVICE_PORT", flags[config.ServicePort])
+	flags[app.ControlPort] = env.GetVariableOrDefault(ctx, "CONTROL_PORT", flags[app.ControlPort])
+	flags[app.ServicePort] = env.GetVariableOrDefault(ctx, "SERVICE_PORT", flags[app.ServicePort])
 
-	apply := func(f config.Flag) func(string) error {
+	apply := func(f app.Flag) func(string) error {
 		return func(value string) error {
 			flags[f] = value
 			return nil
@@ -51,12 +51,12 @@ func parseExternalConfig(ctx context.Context, flags config.Flags) (context.Conte
 	}
 
 	// Allow command line arguments to override defaults and environment variables
-	flag.BoolFunc("devmode", "enable devmode with fake backend data", apply(config.DevModeEnabled))
-	flag.Func("listen", "network and address to listen to", apply(config.ListenAddress))
-	flag.Func("controlport", "port number to bind to for the control interface", apply(config.ServicePort))
-	flag.Func("port", "port number to bind to for the public interface", apply(config.ServicePort))
-	flag.Func("web-assets", "path to web assets folder", apply(config.WebAssetPath))
-	flag.Func("log-format", "choose to get log output in text or json format", apply(config.LogFormat))
+	flag.BoolFunc("devmode", "enable devmode with fake backend data", apply(app.DevModeEnabled))
+	flag.Func("listen", "network and address to listen to", apply(app.ListenAddress))
+	flag.Func("controlport", "port number to bind to for the control interface", apply(app.ControlPort))
+	flag.Func("port", "port number to bind to for the public interface", apply(app.ServicePort))
+	flag.Func("web-assets", "path to web assets folder", apply(app.WebAssetPath))
+	flag.Func("log-format", "choose to get log output in text or json format", apply(app.LogFormat))
 	flag.Parse()
 
 	return ctx, flags

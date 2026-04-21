@@ -20,7 +20,7 @@ RUN go mod download
 COPY . .
 
 RUN templ generate
-RUN ./tailwindcss -i ./internal/pkg/presentation/web/css/input.css -o ./assets/css/loran.css
+RUN ./tailwindcss -i ./internal/platform/web/css/input.css -o ./assets/css/loran.css
 
 WORKDIR /app/cmd/hemsida
 

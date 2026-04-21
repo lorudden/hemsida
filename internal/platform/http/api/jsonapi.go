@@ -1,4 +1,4 @@
-package jsonapi
+package api
 
 import (
 	"context"
@@ -7,14 +7,14 @@ import (
 	"net/http"
 )
 
-func NewJSONAPIHandler(appContext context.Context) http.HandlerFunc {
-
-	type jsonMetaApi struct {
+// NewJSONAPIHandler returns the JSON:API endpoint handler.
+func NewJSONAPIHandler(context.Context) http.HandlerFunc {
+	type jsonMetaAPI struct {
 		Version string `json:"version"`
 	}
 
 	type jsonapiMeta struct {
-		Api jsonMetaApi `json:"jsonapi"`
+		API jsonMetaAPI `json:"jsonapi"`
 	}
 
 	type jsonapiDataItem struct {
@@ -23,23 +23,20 @@ func NewJSONAPIHandler(appContext context.Context) http.HandlerFunc {
 		Attributes map[string]string `json:"attributes"`
 	}
 
-	type jsonapiObj struct {
+	type jsonapiObject struct {
 		Meta  jsonapiMeta `json:"meta"`
 		Data  any         `json:"data,omitempty"`
 		Error any         `json:"error,omitempty"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		//ctx := r.Context()
-
-		obj := &jsonapiObj{
+		obj := &jsonapiObject{
 			Meta: jsonapiMeta{
-				Api: jsonMetaApi{Version: "1.1"},
+				API: jsonMetaAPI{Version: "1.1"},
 			},
 		}
 
 		data := make([]jsonapiDataItem, 0, 10)
-
 		data = append(data, jsonapiDataItem{
 			Type: "articles",
 			ID:   "1",
@@ -55,7 +52,6 @@ func NewJSONAPIHandler(appContext context.Context) http.HandlerFunc {
 
 		w.Header().Add("Content-Length", fmt.Sprintf("%d", len(responseBody)))
 		w.Header().Add("Content-Type", "application/vnd.api+json")
-
 		w.WriteHeader(http.StatusOK)
 		w.Write(responseBody)
 	}

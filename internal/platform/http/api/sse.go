@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 )
 
+// NewSSEHandler returns the server-sent events endpoint handler.
 func NewSSEHandler(appContext context.Context, version string) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -25,7 +26,7 @@ func NewSSEHandler(appContext context.Context, version string) http.HandlerFunc 
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		const eventFmt string = "event: %s\ndata: %s\n\n"
+		const eventFmt = "event: %s\ndata: %s\n\n"
 
 		logger.Info("comparing versions", "client", r.PathValue("version"), "mine", version)
 		waitingForUpgrade := false
@@ -49,6 +50,7 @@ func NewSSEHandler(appContext context.Context, version string) http.HandlerFunc 
 		defer func() { logger.Info("exiting sse handler") }()
 
 		tmr := time.NewTicker(time.Second)
+		defer tmr.Stop()
 
 		for {
 			select {

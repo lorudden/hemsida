@@ -13,13 +13,10 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/net/http/router"
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/google/uuid"
-
-	"github.com/lorudden/hemsida/internal/app"
-	"github.com/lorudden/hemsida/internal/pkg/presentation/api/handlers"
-	"github.com/lorudden/hemsida/internal/pkg/presentation/api/jsonapi"
-	"github.com/lorudden/hemsida/internal/pkg/presentation/web/components"
+	pagesweb "github.com/lorudden/hemsida/internal/content/pages/web"
 )
 
+// NewAssetLoader creates the shared asset loader used by HTTP handlers.
 func NewAssetLoader(ctx context.Context, assetPath string) (frontendtoolkit.AssetLoader, error) {
 	return assets.NewLoader(ctx,
 		assets.BasePath(assetPath), assets.Exclude("/l10n"),
@@ -27,17 +24,16 @@ func NewAssetLoader(ctx context.Context, assetPath string) (frontendtoolkit.Asse
 	)
 }
 
+// NewLocaleBundle creates the locale bundle used by rendered pages.
 func NewLocaleBundle(ctx context.Context, assetPath string, languages []string) (frontendtoolkit.LocaleBundle, error) {
 	l10n := locale.NewLocalizer(assetPath, languages...)
 	return l10n, nil
 }
 
-func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle, app app.App) error {
-
+// RegisterHandlers wires the public HTTP routes into the provided mux.
+func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle) error {
 	version := uuid.NewString()
-
 	logger := logging.GetFromContext(appContext)
-
 	r := router.New(handler)
 
 	assets.RegisterEndpoints(appContext, assetLoader, assets.WithMux(handler),
@@ -50,19 +46,18 @@ func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetL
 
 	r.Get("/{$}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-
 		acceptLanguage := r.Header.Get("Accept-Language")
 		localizer := l10n.For(acceptLanguage)
 
 		w.Header().Add("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
-		home := components.StartPage(version, localizer, assetLoader.Load)
+		home := pagesweb.StartPage(version, localizer, assetLoader.Load)
 		home.Render(ctx, w)
 	}))
 
-	r.Get("/api", jsonapi.NewJSONAPIHandler(appContext))
-	r.Get("/api/sse/{version}", handlers.NewSSEHandler(appContext, version))
+	r.Get("/api", NewJSONAPIHandler(appContext))
+	r.Get("/api/sse/{version}", NewSSEHandler(appContext, version))
 
 	return nil
 }
