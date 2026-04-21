@@ -14,7 +14,7 @@ import (
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/google/uuid"
 
-	"github.com/lorudden/hemsida/internal/pkg/application"
+	"github.com/lorudden/hemsida/internal/app"
 	"github.com/lorudden/hemsida/internal/pkg/presentation/api/handlers"
 	"github.com/lorudden/hemsida/internal/pkg/presentation/api/jsonapi"
 	"github.com/lorudden/hemsida/internal/pkg/presentation/web/components"
@@ -32,7 +32,7 @@ func NewLocaleBundle(ctx context.Context, assetPath string, languages []string) 
 	return l10n, nil
 }
 
-func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle, app application.App) error {
+func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle, app app.App) error {
 
 	version := uuid.NewString()
 

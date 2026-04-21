@@ -6,7 +6,7 @@ import (
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/servicerunner"
-	"github.com/lorudden/hemsida/internal/pkg/application"
+	"github.com/lorudden/hemsida/internal/app"
 	"github.com/lorudden/hemsida/internal/pkg/presentation/api"
 )
 
@@ -52,7 +52,7 @@ func New(ctx context.Context, flags Flags) (*AppData, error) {
 
 func Initialize(ctx context.Context, flags Flags, cfg *AppData) (servicerunner.Runner[AppData], error) {
 	var err error
-	cfg.app, err = application.New(ctx)
+	cfg.app, err = app.New(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func Initialize(ctx context.Context, flags Flags, cfg *AppData) (servicerunner.R
 }
 
 type AppData struct {
-	app application.App
+	app app.App
 
 	cancelContext context.CancelFunc
 }
