@@ -14,6 +14,16 @@
       "planned_path": "/nyheter",
       "migration_status": "inventory",
       "visibility": "public",
+      "image_import_mode": "external-link",
+      "image_collections": [
+        {
+          "id": "news-teasers",
+          "title": "Nyhetsbilder",
+          "kind": "carousel",
+          "import_mode": "external-link",
+          "items": []
+        }
+      ],
       "tags": [
         "migration",
         "news"

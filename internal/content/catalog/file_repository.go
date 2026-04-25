@@ -62,6 +62,22 @@ func validateCollection(path string, collection Collection) error {
 		if strings.TrimSpace(string(item.Kind)) == "" {
 			return fmt.Errorf("content collection %q contains item %q with missing kind", path, item.ID)
 		}
+		for _, imageCollection := range item.ImageCollections {
+			if strings.TrimSpace(imageCollection.ID) == "" {
+				return fmt.Errorf("content collection %q contains item %q with image collection missing id", path, item.ID)
+			}
+			if strings.TrimSpace(imageCollection.Title) == "" {
+				return fmt.Errorf("content collection %q contains item %q with image collection %q missing title", path, item.ID, imageCollection.ID)
+			}
+			for _, image := range imageCollection.Items {
+				if strings.TrimSpace(image.ID) == "" {
+					return fmt.Errorf("content collection %q contains item %q with image missing id in collection %q", path, item.ID, imageCollection.ID)
+				}
+				if strings.TrimSpace(image.SourceURL) == "" {
+					return fmt.Errorf("content collection %q contains item %q with image %q missing source_url in collection %q", path, item.ID, image.ID, imageCollection.ID)
+				}
+			}
+		}
 	}
 
 	return nil

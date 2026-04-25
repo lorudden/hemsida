@@ -6,7 +6,22 @@
     {
       "id": "annual-meeting",
       "kind": "news",
-      "title": "Annual Meeting"
+      "title": "Annual Meeting",
+      "image_import_mode": "external-link",
+      "image_collections": [
+        {
+          "id": "article-images",
+          "title": "Article Images",
+          "kind": "carousel",
+          "import_mode": "external-link",
+          "items": [
+            {
+              "id": "annual-meeting-1",
+              "source_url": "https://l.example/annual-meeting-1.jpg"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

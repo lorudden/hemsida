@@ -6,7 +6,22 @@
     {
       "id": "lorudden",
       "kind": "page",
-      "title": "Lörudden"
+      "title": "Lörudden",
+      "image_import_mode": "external-link",
+      "image_collections": [
+        {
+          "id": "hero",
+          "title": "Hero",
+          "kind": "carousel",
+          "import_mode": "external-link",
+          "items": [
+            {
+              "id": "lorudden-hero-1",
+              "source_url": "https://l.example/lorudden-hero-1.jpg"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "hamnforeningen",

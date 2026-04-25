@@ -57,6 +57,8 @@ Den nya sajten har nu filbaserade kataloger för både innehåll och media.
 - `data/content/` innehåller sidor och nyheter och exponeras på `GET /api/content`
 - `data/media/` innehåller dokument och galleriinnehåll och exponeras på `GET /api/media`
 - varje `*.json`-fil motsvarar en samling som laddas vid uppstart
+- i första importpasset kan sidor och nyheter länka bilder direkt från den nuvarande WordPress-sajten istället för att flytta bildfilerna direkt
+- sidor och nyheter kan lagra flera bilder i `image_collections`, vilket gör det lättare att bygga karuseller och liknande visningar senare
 - sökvägarna kan styras med `CONTENT_DATA_PATH` eller `-content-data`, samt `MEDIA_DATA_PATH` eller `-media-data`
 
 Det här är tänkt som mellanlagring för migrering från `https://löranshamnförening.se` tills vi verkligen behöver databasscheman för redigering, behörigheter och communityfunktioner.
