@@ -14,6 +14,7 @@ const (
 	ControlPort
 	WebAssetPath
 	MediaDataPath
+	ContentDataPath
 	DevModeEnabled
 	LogFormat
 )
@@ -21,24 +22,27 @@ const (
 // DefaultFlags returns the baseline startup flags for the service.
 func DefaultFlags() Flags {
 	return Flags{
-		ListenAddress:  "",
-		ServicePort:    "8080",
-		ControlPort:    "",
-		WebAssetPath:   "/opt/lorudden/assets",
-		MediaDataPath:  "data/media",
-		DevModeEnabled: "false",
-		LogFormat:      "json",
+		ListenAddress:   "",
+		ServicePort:     "8080",
+		ControlPort:     "",
+		WebAssetPath:    "/opt/lorudden/assets",
+		MediaDataPath:   "data/media",
+		ContentDataPath: "data/content",
+		DevModeEnabled:  "false",
+		LogFormat:       "json",
 	}
 }
 
 // Config contains application configuration assembled during startup.
 type Config struct {
-	MediaDataPath string
+	MediaDataPath   string
+	ContentDataPath string
 }
 
 // NewConfig builds application configuration from the resolved flags.
 func NewConfig(_ context.Context, flags Flags) (*Config, error) {
 	return &Config{
-		MediaDataPath: flags[MediaDataPath],
+		MediaDataPath:   flags[MediaDataPath],
+		ContentDataPath: flags[ContentDataPath],
 	}, nil
 }

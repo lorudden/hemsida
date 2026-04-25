@@ -1,0 +1,17 @@
+{
+  "id": "pages",
+  "title": "Pages",
+  "description": "Seed page content.",
+  "items": [
+    {
+      "id": "lorudden",
+      "kind": "page",
+      "title": "Lörudden"
+    },
+    {
+      "id": "hamnforeningen",
+      "kind": "page",
+      "title": "Hamnföreningen"
+    }
+  ]
+}

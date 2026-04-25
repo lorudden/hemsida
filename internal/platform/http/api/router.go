@@ -31,7 +31,7 @@ func NewLocaleBundle(ctx context.Context, assetPath string, languages []string) 
 }
 
 // RegisterHandlers wires the public HTTP routes into the provided mux.
-func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle, mediaHandler http.Handler) error {
+func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetLoader frontendtoolkit.AssetLoader, l10n frontendtoolkit.LocaleBundle, contentHandler http.Handler, mediaHandler http.Handler) error {
 	version := uuid.NewString()
 	logger := logging.GetFromContext(appContext)
 	r := router.New(handler)
@@ -57,6 +57,7 @@ func RegisterHandlers(appContext context.Context, handler *http.ServeMux, assetL
 	}))
 
 	r.Get("/api", NewJSONAPIHandler(appContext))
+	r.Get("/api/content", http.HandlerFunc(contentHandler.ServeHTTP))
 	r.Get("/api/media", http.HandlerFunc(mediaHandler.ServeHTTP))
 	r.Get("/api/sse/{version}", NewSSEHandler(appContext, version))
 

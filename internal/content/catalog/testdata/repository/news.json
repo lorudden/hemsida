@@ -1,0 +1,12 @@
+{
+  "id": "news",
+  "title": "News",
+  "description": "Seed news content.",
+  "items": [
+    {
+      "id": "annual-meeting",
+      "kind": "news",
+      "title": "Annual Meeting"
+    }
+  ]
+}

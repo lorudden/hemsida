@@ -1,0 +1,23 @@
+{
+  "id": "news",
+  "title": "Nyheter",
+  "description": "Startmanifest för synliga nyhetsposter som ska dras över från den nuvarande sajten.",
+  "source_page_url": "https://löranshamnförening.se/?page_id=80",
+  "items": [
+    {
+      "id": "news-landing",
+      "kind": "news",
+      "title": "Nyheter",
+      "slug": "nyheter",
+      "summary": "Landningssida för publicerade nyheter och uppdateringar på den nuvarande sajten.",
+      "source_page_url": "https://löranshamnförening.se/?page_id=80",
+      "planned_path": "/nyheter",
+      "migration_status": "inventory",
+      "visibility": "public",
+      "tags": [
+        "migration",
+        "news"
+      ]
+    }
+  ]
+}

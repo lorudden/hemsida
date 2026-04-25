@@ -50,6 +50,17 @@ I första versionen så fokuserar vi på de sidor som inte kräver någon inlogg
 
 ## Tekniskt mumbo jumbo
 
+### Filbaserad migreringsdata
+
+Den nya sajten har nu filbaserade kataloger för både innehåll och media.
+
+- `data/content/` innehåller sidor och nyheter och exponeras på `GET /api/content`
+- `data/media/` innehåller dokument och galleriinnehåll och exponeras på `GET /api/media`
+- varje `*.json`-fil motsvarar en samling som laddas vid uppstart
+- sökvägarna kan styras med `CONTENT_DATA_PATH` eller `-content-data`, samt `MEDIA_DATA_PATH` eller `-media-data`
+
+Det här är tänkt som mellanlagring för migrering från `https://löranshamnförening.se` tills vi verkligen behöver databasscheman för redigering, behörigheter och communityfunktioner.
+
 ### Bygga och testköra hemsidan med docker
 
 ```bash

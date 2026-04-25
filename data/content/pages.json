@@ -1,0 +1,54 @@
+{
+  "id": "pages",
+  "title": "Synliga sidor",
+  "description": "Första manifestet för synligt sidinnehåll som ska flyttas från den nuvarande WordPress-sajten.",
+  "source_page_url": "https://löranshamnförening.se/",
+  "items": [
+    {
+      "id": "home",
+      "kind": "page",
+      "title": "Välkommen",
+      "slug": "valkommen",
+      "summary": "Startsidan på nuvarande sajten och en naturlig första källa för migrering av publikt innehåll.",
+      "source_page_url": "https://löranshamnförening.se/",
+      "planned_path": "/",
+      "migration_status": "inventory",
+      "visibility": "public",
+      "tags": [
+        "migration",
+        "page",
+        "home"
+      ]
+    },
+    {
+      "id": "lorudden",
+      "kind": "page",
+      "title": "Lörudden",
+      "slug": "lorudden",
+      "summary": "Informationssida med underinnehåll som fiskemuséet, hjärtstartare och kapellet.",
+      "source_page_url": "https://löranshamnförening.se/?page_id=69",
+      "planned_path": "/lorudden",
+      "migration_status": "inventory",
+      "visibility": "public",
+      "tags": [
+        "migration",
+        "page"
+      ]
+    },
+    {
+      "id": "hamnforeningen",
+      "kind": "page",
+      "title": "Hamnföreningen",
+      "slug": "hamnforeningen",
+      "summary": "Föreningssida som bör mappas till en egen informationsyta i den nya webbplatsen.",
+      "source_page_url": "https://löranshamnförening.se/?page_id=91",
+      "planned_path": "/hamnforeningen",
+      "migration_status": "inventory",
+      "visibility": "public",
+      "tags": [
+        "migration",
+        "page"
+      ]
+    }
+  ]
+}
