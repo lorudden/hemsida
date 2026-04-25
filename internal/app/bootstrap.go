@@ -6,6 +6,7 @@ import (
 
 	"github.com/diwise/service-chassis/pkg/infrastructure/o11y/logging"
 	"github.com/diwise/service-chassis/pkg/infrastructure/servicerunner"
+	"github.com/lorudden/hemsida/internal/content/media"
 	platformapi "github.com/lorudden/hemsida/internal/platform/http/api"
 )
 
@@ -18,7 +19,7 @@ func Initialize(ctx context.Context, flags Flags, cfg *Config) (servicerunner.Ru
 	var err error
 
 	state := runtimeState{}
-	_, err = newApplication(ctx)
+	app, err := newApplication(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +42,9 @@ func Initialize(ctx context.Context, flags Flags, cfg *Config) (servicerunner.Ru
 		),
 		webserver("public", listen(flags[ListenAddress]), port(flags[ServicePort]),
 			muxinit(func(ctx context.Context, identifier string, port string, svcCfg *Config, handler *http.ServeMux) error {
-				if err = platformapi.RegisterHandlers(ctx, handler, assetLoader, l10n); err != nil {
+				mediaHandler := media.NewJSONAPIHandler(app.MediaRepository())
+
+				if err = platformapi.RegisterHandlers(ctx, handler, assetLoader, l10n, mediaHandler); err != nil {
 					return err
 				}
 

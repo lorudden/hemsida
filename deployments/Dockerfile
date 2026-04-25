@@ -35,6 +35,7 @@ WORKDIR /opt/lorudden
 
 COPY --from=builder --chown=1001 /app/cmd/hemsida/hemsida /opt/lorudden
 COPY --from=builder --chown=1001 /app/assets /opt/lorudden/assets
+COPY --from=builder --chown=1001 /app/data /opt/lorudden/data
 
 RUN chown 1001 /opt/lorudden
 

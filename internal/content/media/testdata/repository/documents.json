@@ -1,0 +1,17 @@
+{
+  "id": "documents",
+  "title": "Documents",
+  "description": "Migrated downloadable documents.",
+  "items": [
+    {
+      "id": "harbour-report",
+      "kind": "document",
+      "title": "Harbour Report"
+    },
+    {
+      "id": "charter",
+      "kind": "document",
+      "title": "Association Charter"
+    }
+  ]
+}

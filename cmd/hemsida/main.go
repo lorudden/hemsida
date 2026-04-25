@@ -42,6 +42,7 @@ func parseExternalConfig(ctx context.Context, flags app.Flags) (context.Context,
 
 	flags[app.ControlPort] = env.GetVariableOrDefault(ctx, "CONTROL_PORT", flags[app.ControlPort])
 	flags[app.ServicePort] = env.GetVariableOrDefault(ctx, "SERVICE_PORT", flags[app.ServicePort])
+	flags[app.MediaDataPath] = env.GetVariableOrDefault(ctx, "MEDIA_DATA_PATH", flags[app.MediaDataPath])
 
 	apply := func(f app.Flag) func(string) error {
 		return func(value string) error {
@@ -56,6 +57,7 @@ func parseExternalConfig(ctx context.Context, flags app.Flags) (context.Context,
 	flag.Func("controlport", "port number to bind to for the control interface", apply(app.ControlPort))
 	flag.Func("port", "port number to bind to for the public interface", apply(app.ServicePort))
 	flag.Func("web-assets", "path to web assets folder", apply(app.WebAssetPath))
+	flag.Func("media-data", "path to the JSON media catalog directory", apply(app.MediaDataPath))
 	flag.Func("log-format", "choose to get log output in text or json format", apply(app.LogFormat))
 	flag.Parse()
 

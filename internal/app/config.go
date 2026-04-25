@@ -13,6 +13,7 @@ const (
 	ServicePort
 	ControlPort
 	WebAssetPath
+	MediaDataPath
 	DevModeEnabled
 	LogFormat
 )
@@ -24,15 +25,20 @@ func DefaultFlags() Flags {
 		ServicePort:    "8080",
 		ControlPort:    "",
 		WebAssetPath:   "/opt/lorudden/assets",
+		MediaDataPath:  "data/media",
 		DevModeEnabled: "false",
 		LogFormat:      "json",
 	}
 }
 
 // Config contains application configuration assembled during startup.
-type Config struct{}
+type Config struct {
+	MediaDataPath string
+}
 
 // NewConfig builds application configuration from the resolved flags.
-func NewConfig(context.Context, Flags) (*Config, error) {
-	return &Config{}, nil
+func NewConfig(_ context.Context, flags Flags) (*Config, error) {
+	return &Config{
+		MediaDataPath: flags[MediaDataPath],
+	}, nil
 }

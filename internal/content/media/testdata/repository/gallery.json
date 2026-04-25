@@ -1,0 +1,12 @@
+{
+  "id": "gallery",
+  "title": "Gallery",
+  "description": "Seed gallery items.",
+  "items": [
+    {
+      "id": "harbour-sunset",
+      "kind": "image",
+      "title": "Harbour Sunset"
+    }
+  ]
+}

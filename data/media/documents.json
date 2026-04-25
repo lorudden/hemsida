@@ -1,0 +1,24 @@
+{
+  "id": "documents",
+  "title": "Migrerade dokument",
+  "description": "Första filbaserade katalogen för synligt material som ska flyttas från den nuvarande WordPress-sajten.",
+  "source_page_url": "https://löranshamnförening.se/",
+  "items": [
+    {
+      "id": "slutrapport-loran-bramon-2013-01-14",
+      "kind": "document",
+      "title": "Slutrapport Löran-Brämön 2013-01-14",
+      "description": "Exempel på befintligt publikt dokument som kan migreras till den nya sajten utan databasstöd.",
+      "source_url": "https://löranshamnförening.se/wp-content/uploads/2013/02/slutrapport_loran_bramon_2013-01-14.pdf",
+      "source_page_url": "https://löranshamnförening.se/",
+      "storage_path": "documents/slutrapport_loran_bramon_2013-01-14.pdf",
+      "mime_type": "application/pdf",
+      "migration_status": "inventory",
+      "visibility": "public",
+      "tags": [
+        "migration",
+        "document"
+      ]
+    }
+  ]
+}
