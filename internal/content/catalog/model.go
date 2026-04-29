@@ -14,7 +14,8 @@ const (
 type ImageImportMode string
 
 const (
-	ImageImportModeExternal ImageImportMode = "external-link"
+	ImageImportModeExternal   ImageImportMode = "external-link"
+	ImageImportModeDownloaded ImageImportMode = "downloaded"
 )
 
 // ImageReference points at an image that remains hosted on the source site for now.
@@ -22,6 +23,8 @@ type ImageReference struct {
 	ID          string `json:"id"`
 	Title       string `json:"title,omitempty"`
 	SourceURL   string `json:"source_url"`
+	StoragePath string `json:"storage_path,omitempty"`
+	MIMEType    string `json:"mime_type,omitempty"`
 	AltText     string `json:"alt_text,omitempty"`
 	Caption     string `json:"caption,omitempty"`
 	Attribution string `json:"attribution,omitempty"`

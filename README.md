@@ -57,11 +57,28 @@ Den nya sajten har nu filbaserade kataloger för både innehåll och media.
 - `data/content/` innehåller sidor och nyheter och exponeras på `GET /api/content`
 - `data/media/` innehåller dokument och galleriinnehåll och exponeras på `GET /api/media`
 - varje `*.json`-fil motsvarar en samling som laddas vid uppstart
-- i första importpasset kan sidor och nyheter länka bilder direkt från den nuvarande WordPress-sajten istället för att flytta bildfilerna direkt
+- importverktyget kan ladda ner äldre WordPress-bilder till `data/media/legacy/` vid importtid så att den nya sajten slipper mixed-content-problem över `https`
 - sidor och nyheter kan lagra flera bilder i `image_collections`, vilket gör det lättare att bygga karuseller och liknande visningar senare
 - sökvägarna kan styras med `CONTENT_DATA_PATH` eller `-content-data`, samt `MEDIA_DATA_PATH` eller `-media-data`
 
 Det här är tänkt som mellanlagring för migrering från `https://löranshamnförening.se` tills vi verkligen behöver databasscheman för redigering, behörigheter och communityfunktioner.
+
+### Importverktyg
+
+Ett första importverktyg finns under `cmd/importcontent/`.
+
+- verktyget läser `data/content/pages.json` och `data/content/news.json`
+- varje entry hämtar sin `source_page_url` och försöker fylla på titel, summary, publiceringsdatum och bildreferenser
+- vid vanlig körning laddas bildfiler ner till `data/media/legacy/`, medan manifesten behåller `source_url` och kompletteras med `storage_path` och `mime_type`
+- `-dry-run` skriver varken manifest eller nedladdade bildfiler
+
+Exempel:
+
+```bash
+go run ./cmd/importcontent -dry-run
+go run ./cmd/importcontent
+go run ./cmd/importcontent -media-dir .tmp/import-preview/media
+```
 
 ### Bygga och testköra hemsidan med docker
 
