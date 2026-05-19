@@ -30,16 +30,15 @@ ARG TARGETOS
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build
 
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal
+FROM scratch
+
 WORKDIR /opt/lorudden
 
-COPY --from=builder --chown=1001 /app/cmd/hemsida/hemsida /opt/lorudden
-COPY --from=builder --chown=1001 /app/assets /opt/lorudden/assets
-COPY --from=builder --chown=1001 /app/data /opt/lorudden/data
+COPY --from=builder --chown=65532 /app/cmd/hemsida/hemsida /opt/lorudden
+COPY --from=builder --chown=65532 /app/assets /opt/lorudden/assets
+COPY --from=builder --chown=65532 /app/data /opt/lorudden/data
 
-RUN chown 1001 /opt/lorudden
+USER 65532:65532
 
 EXPOSE 8080
-USER 1001
-
 ENTRYPOINT ["/opt/lorudden/hemsida"]
