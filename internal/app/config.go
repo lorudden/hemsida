@@ -1,6 +1,11 @@
 package app
 
-import "context"
+import (
+	"context"
+	"flag"
+
+	"github.com/diwise/service-chassis/pkg/infrastructure/env"
+)
 
 // Flag identifies an application startup flag.
 type Flag int
@@ -31,6 +36,36 @@ func DefaultFlags() Flags {
 		DevModeEnabled:  "false",
 		LogFormat:       "json",
 	}
+}
+
+// ResolveFlags merges defaults, environment variables, and command-line flags.
+func ResolveFlags(ctx context.Context) (context.Context, Flags) {
+	flags := DefaultFlags()
+
+	flags[ControlPort] = env.GetVariableOrDefault(ctx, "CONTROL_PORT", flags[ControlPort])
+	flags[ServicePort] = env.GetVariableOrDefault(ctx, "SERVICE_PORT", flags[ServicePort])
+	flags[MediaDataPath] = env.GetVariableOrDefault(ctx, "MEDIA_DATA_PATH", flags[MediaDataPath])
+	flags[ContentDataPath] = env.GetVariableOrDefault(ctx, "CONTENT_DATA_PATH", flags[ContentDataPath])
+
+	apply := func(f Flag) func(string) error {
+		return func(value string) error {
+			flags[f] = value
+			return nil
+		}
+	}
+
+	// Allow command line arguments to override defaults and environment variables.
+	flag.BoolFunc("devmode", "enable devmode with fake backend data", apply(DevModeEnabled))
+	flag.Func("listen", "network and address to listen to", apply(ListenAddress))
+	flag.Func("controlport", "port number to bind to for the control interface", apply(ControlPort))
+	flag.Func("port", "port number to bind to for the public interface", apply(ServicePort))
+	flag.Func("web-assets", "path to web assets folder", apply(WebAssetPath))
+	flag.Func("media-data", "path to the JSON media catalog directory", apply(MediaDataPath))
+	flag.Func("content-data", "path to the JSON content catalog directory", apply(ContentDataPath))
+	flag.Func("log-format", "choose to get log output in text or json format", apply(LogFormat))
+	flag.Parse()
+
+	return ctx, flags
 }
 
 // Config contains application configuration assembled during startup.
