@@ -1,12 +1,13 @@
 module github.com/lorudden/hemsida
 
-go 1.26
+go 1.26.3
 
 require (
-	github.com/a-h/templ v0.3.1001
+	github.com/a-h/templ v0.3.1020
 	github.com/diwise/frontend-toolkit v0.0.0-20260415092357-e1a516b37b14
 	github.com/diwise/service-chassis v0.0.0-20260422052908-c008fa0f0e7b
 	github.com/google/uuid v1.6.0
+	golang.org/x/net v0.53.0
 )
 
 require (
@@ -40,7 +41,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect

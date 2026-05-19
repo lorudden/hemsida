@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM docker.io/golang:1.26 AS builder
+FROM --platform=$BUILDPLATFORM docker.io/golang:1.26.3 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -9,7 +9,7 @@ ARG BUILDARCH
 
 RUN echo $BUILDARCH
 
-RUN curl --fail -sL "https://github.com/tailwindlabs/tailwindcss/releases/download/v4.2.2/tailwindcss-linux-$BUILDARCH" -o tailwindcss
+RUN curl --fail -sL "https://github.com/tailwindlabs/tailwindcss/releases/download/v4.3.0/tailwindcss-linux-$BUILDARCH" -o tailwindcss
 RUN chmod +x tailwindcss
 
 COPY go.mod .
